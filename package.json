@@ -1,0 +1,24 @@
+{
+  "name": "local-commercelayer-import-single-next",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "deploy": "components-v1 --aws-profile default"
+  },
+  "dependencies": {
+    "@commercelayer/js-auth": "^2.3.0",
+    "chalk": "^5.2.0",
+    "mysql": "^2.18.1",
+    "next": "13.1.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "eslint": "8.31.0",
+    "eslint-config-next": "13.1.1"
+  }
+}

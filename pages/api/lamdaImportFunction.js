@@ -36,7 +36,6 @@ const prepareJsonObjForImportType = (dbData, importType, attribute_types) => {
               metadata: info.metadata,
             });
           }
-          //   SKU IMPORT
           const skuData = {
             data: {
               type: "imports",
@@ -48,7 +47,7 @@ const prepareJsonObjForImportType = (dbData, importType, attribute_types) => {
           };
           resolve(skuData);
           break;
-        case "PRICE_IMPORT":
+        case "REGULAR_PRICE_IMPORT":
           let priceInput = [];
           for (let price of dbData) {
             priceInput.push({

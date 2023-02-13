@@ -127,7 +127,7 @@ export default async function handler(req, res) {
         await leadDeliveryTimeImportInCL().then(async (allSkuData) => {
             res.status(200).json({
                 message: "Delivery Lead Time Sync Done Successfully...",
-                logs: helper.skuImportFinalStatus()
+                logs: helper.clImportFinalStatus()
             });
         });
     } catch (error) {

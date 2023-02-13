@@ -72,7 +72,7 @@ export default async function handler(req, res) {
               message: "Product Sync Done Successfully...",
               sku_length: allSkuData.skuInput.length,
               lastSKUId: lastImportedSKUId,
-              logs: helper.skuImportFinalStatus()
+              logs: helper.clImportFinalStatus()
             });
           });
         });

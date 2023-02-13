@@ -7,17 +7,17 @@ import { executeQuery } from "../../config/db";
 const retrieveDataFromImportQueueTable = (freeSlots) => {
   return new Promise(async (resolve, reject) => {
     queueHelper.logger(`Fetching import_queue table records...`, log_color.YELLOW);
-    let queueDataQry = `SELECT id,import_name,import_params, import_time 
+    let queueDataQry = `SELECT id,import_name,import_params, import_time,import_priority  
       FROM import_queue 
       WHERE import_completed = 'N' 
-      ORDER BY id ASC LIMIT ${freeSlots}
+      ORDER BY import_priority ASC LIMIT ${freeSlots}
       `;
     let queueDataRes = await executeQuery(queueDataQry, []);
-    queueHelper.logger(`${queueDataRes.length} Records fetched.`, log_color.GREEN);
+    queueHelper.logger(`${queueDataRes.length} Records fetched from import_queue table.`, log_color.GREEN);
     resolve(queueDataRes);
   });
 };
-const prepareJsonObjForImportType = (dbData, importType,attribute_types) => {
+const prepareJsonObjForImportType = (dbData, importType, attribute_types) => {
   return new Promise(async (resolve, reject) => {
     if (dbData.length > 0) {
       switch (importType) {
@@ -25,28 +25,28 @@ const prepareJsonObjForImportType = (dbData, importType,attribute_types) => {
           let skuInput = [];
           for (let sku of dbData) {
             let info = await queueHelper.createMetaDataForSku(attribute_types, sku);
-          skuInput.push({
-            code: sku.sku_code,
-            name: sku.sku_code,
-            image_url: `https://do6sydhp1s299.cloudfront.net/${process.env.CLOUDFRONT_ENV}/${sku.sku_image}`,
-            description: sku.sku_desc,
-            reference: sku.parent_id,
-            shipping_category_id: process.env.CL_SHIPPING_CATEGORY_ID,
-            do_not_track: true,
-            metadata: info.metadata,
-          });
-        }
-      //   SKU IMPORT
-      const skuData = {
-        data: {
-          type: "imports",
-          attributes: {
-            resource_type: "skus",
-            inputs: skuInput,
-          },
-        },
-      };        
-        resolve(skuData);
+            skuInput.push({
+              code: sku.sku_code,
+              name: sku.sku_code,
+              image_url: `https://do6sydhp1s299.cloudfront.net/${process.env.CLOUDFRONT_ENV}/${sku.sku_image}`,
+              description: sku.sku_desc,
+              reference: sku.parent_id,
+              shipping_category_id: process.env.CL_SHIPPING_CATEGORY_ID,
+              do_not_track: true,
+              metadata: info.metadata,
+            });
+          }
+          //   SKU IMPORT
+          const skuData = {
+            data: {
+              type: "imports",
+              attributes: {
+                resource_type: "skus",
+                inputs: skuInput,
+              },
+            },
+          };
+          resolve(skuData);
           break;
         case "PRICE_IMPORT":
           let priceInput = [];
@@ -58,7 +58,7 @@ const prepareJsonObjForImportType = (dbData, importType,attribute_types) => {
               compare_at_amount_cents: queueHelper.toCents(price.sku_list_price),
             });
           }
-         
+
           const priceData = {
             data: {
               type: "imports",
@@ -72,6 +72,27 @@ const prepareJsonObjForImportType = (dbData, importType,attribute_types) => {
           };
           resolve(priceData);
           break;
+        case "STOCK_IMPORT":
+          let stockInput = [];
+          for (let stock of dbData) {
+            stockInput.push({
+              stock_location_id: stock.cl_stock_location_id,
+              sku_code: stock.sku_code,
+              quantity: queueHelper.makeValidStock(stock.sku_stock),
+            });
+          }
+          const stockData = {
+            data: {
+              type: "imports",
+              attributes: {
+                resource_type: "stock_items",
+                format: "json",
+                inputs: stockInput,
+              },
+            },
+          };
+          resolve(stockData);
+          break;
         default:
           break;
       }
@@ -81,7 +102,7 @@ const prepareJsonObjForImportType = (dbData, importType,attribute_types) => {
 const productTypeImportInCL = (importObj, productType) => {
   return new Promise((resolve, reject) => {
     const skuAPIUrl = `${process.env.CL_BASE_ENDPOINT}/api/imports`;
-    queueHelper.logger(`Importing Product Type...`, log_color.YELLOW);
+    queueHelper.logger(`Importing Product Type (${productType}) in CL...`, log_color.YELLOW);
     fetch(skuAPIUrl, {
       body: JSON.stringify(importObj),
       method: "POST",
@@ -130,11 +151,6 @@ const updateImportQueueTable = (id) => {
   });
 };
 const importProcess = async () => {
-  var dateString = new Date().toLocaleString();
-  queueHelper.logger(
-    "Started importProcess function at : " + dateString,
-    log_color.GREEN
-  );
   await queueHelper.getCommerceLayerAccessToken().then(async () => {
     queueHelper.logger("Access Token fetched...", log_color.GREEN);
     queueHelper.logger(
@@ -148,23 +164,22 @@ const importProcess = async () => {
       if (freeSlots > 0) {
         await retrieveDataFromImportQueueTable(freeSlots).then(
           async (queueDataRes) => {
-            console.log(queueDataRes.length > 0)
             if (queueDataRes.length > 0) {
               queueHelper.logger(`Fetching attribute_types from product_shippable_setup_attribute_types table.`, log_color.GREEN);
               let attrQry = `SELECT id,name FROM product_shippable_setup_attribute_types`;
-              let attribute_types = await executeQuery(attrQry, []);               
+              let attribute_types = await executeQuery(attrQry, []);
               for (let queRec of queueDataRes) {
                 //Replacing NOW() with the timstamp stored in import_queue table
                 let importSql =
                   importQry[queRec.import_name].replace("NOW()", "'" + queueHelper.convertJSDatetimeToMYSQLDatetime(queRec.import_time) + "'") + " " + queRec.import_params;
                 let allImportData = await executeQuery(importSql, []);
-   
+
                 await prepareJsonObjForImportType(
                   allImportData,
-                  queRec.import_name,attribute_types
+                  queRec.import_name, attribute_types
                 ).then(async (importObj) => {
-                  queueHelper.logger(`JSON created for Import`, log_color.GREEN);
-                  console.log(importObj.data.attributes.inputs);process.exit();
+                  queueHelper.logger(`JSON created for Import. Object Count is : ${allImportData.length}`, log_color.GREEN);
+                  //console.log(importObj.data.attributes.inputs);process.exit();
                   await productTypeImportInCL(importObj, queRec.import_name).then(
                     async () => {
                       await updateImportQueueTable(queRec.id).then(
@@ -178,6 +193,7 @@ const importProcess = async () => {
                     }
                   );
                 });
+
               }
             }
           }
@@ -195,10 +211,20 @@ const importProcess = async () => {
 
 export default async function handler(req, res) {
   try {
+    var dateString = new Date().toLocaleString();
+    queueHelper.logger(
+      "Started importProcess function at : " + dateString,
+      log_color.GREEN
+    );
     await importProcess().then(() => {
+      var dateString = new Date().toLocaleString();
+      queueHelper.logger(
+        "Completed importProcess function at : " + dateString,
+        log_color.GREEN
+      );
       res.json({
         message: "ALL PROCESS HAS BEEN DONE",
-        logs: queueHelper.skuImportFinalStatus(),
+        logs: queueHelper.clImportFinalStatus(),
       });
     });
   } catch (error) {

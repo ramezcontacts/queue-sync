@@ -4,7 +4,7 @@ import { executeQuery } from "../config/db";
 import Helper from "./helper";
 class QueueSync extends Helper{
     //--------------------COMMON FUNCTIONS------------------------
-    insertDataToImportQueueTable = async (importType) => {
+    insertDataToImportQueueTable = async (importType,priority) => {
         return new Promise(async (resolve, reject) => {
             this.logger(`Preparing Count Query for ${importType} ... `, log_color.YELLOW)
             let countQryPrefix = "SELECT COUNT(*) FROM (";
@@ -39,8 +39,8 @@ class QueueSync extends Helper{
                         }
                     }
                     this.logger(`Inserting Record as : ${importType}, ${limit}`, log_color.BLUE)
-                    let insertQry = `INSERT INTO import_queue (import_name, import_params, import_time, import_completed)
-                VALUES('${importType}','${limit}','${this.convertJSDatetimeToMYSQLDatetime(new Date())}','N');`;
+                    let insertQry = `INSERT INTO import_queue (import_name, import_params, import_time, import_priority, import_completed)
+                VALUES('${importType}','${limit}','${this.convertJSDatetimeToMYSQLDatetime(new Date())}','${priority}', 'N');`;
                     let insertRes = await executeQuery(insertQry, []);
                     this.logger(`LAST INSERTED ID:  ${insertRes.insertId}`, log_color.YELLOW)
                     if (i === expectedRecordCount - 1) {

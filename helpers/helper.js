@@ -42,7 +42,7 @@ class Helper {
     skuImportStatus.push(msg);
     console.log(chalk[msgColor](msg));
   };
-  skuImportFinalStatus() {
+  clImportFinalStatus() {
     let retVal = skuImportStatus;
     skuImportStatus = [];
     return retVal;

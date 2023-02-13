@@ -3,8 +3,8 @@ import log_color from "../../constants/log_constants";
 const queueHelper = new QueueSync();
 export default async function handler(req, res) {
   try {
-    const importType = 'SKU_IMPORT';
-    const priority = 1;
+    const importType = 'STOCK_IMPORT';
+    const priority = 2;
     queueHelper.logger(`Process Started for ${importType}`, log_color.YELLOW);
     await queueHelper.insertDataToImportQueueTable(importType,priority).then(() => {
         queueHelper.logger(`ALL PROCESS HAS BEEN DONE !!`, log_color.GREEN);

@@ -274,7 +274,7 @@ export default async function handler(req, res) {
   try {
     // setInterval(importProcess, 5000);
     await importProcess().then(() => {
-        res.json({message: "ALL PROCESS HAS BEEN DONE", logs: helper.skuImportFinalStatus()})
+        res.json({message: "ALL PROCESS HAS BEEN DONE", logs: helper.clImportFinalStatus()})
     })
   } catch (error) {
     res.json(error);

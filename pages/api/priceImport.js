@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     await insertDataToQueue().then(() => {
       res.json({
         message: "ALL PROCESS HAS BEEN DONE",
-        logs: helper.skuImportFinalStatus(),
+        logs: helper.clImportFinalStatus(),
       });
     });
   } catch (error) {

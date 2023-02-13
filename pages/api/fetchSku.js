@@ -24,7 +24,7 @@ const getCommerceLayerSalesChannelAccessToken = async () => {
 
 export default async function handler(req, res) {
     try {
-        const skuID = "BALKSQxGKX";
+        const skuID = "ZbpjSNqLok";
         //   IMPORTING ALL SKUs
         const skuAPIUrl = `${process.env.CL_BASE_ENDPOINT}/api/skus/${skuID}?include=delivery_lead_times`;
         const accessToken = await getCommerceLayerSalesChannelAccessToken();
